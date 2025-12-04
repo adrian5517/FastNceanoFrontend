@@ -6,8 +6,10 @@ const DesktopScanner = ({ onScanComplete, focusEnabled = true }) => {
   const lastTimeRef = useRef(0);
 
   useEffect(() => {
-    // Window-level listener collects fast keystrokes from desktop scanners
-    const handleWindowKey = (e) => {
+    // Window-level listeners collect fast keystrokes from desktop scanners
+    const CHAR_GAP_MS = 500; // tolerate up to 500ms between characters for slower scanners
+
+    const handleKey = (e) => {
       const now = Date.now();
       // Ignore modifier keys
       if (e.key === 'Shift' || e.key === 'Control' || e.key === 'Alt' || e.key === 'Meta') return;
@@ -25,9 +27,9 @@ const DesktopScanner = ({ onScanComplete, focusEnabled = true }) => {
       }
 
       // Only capture printable single characters
-      if (e.key.length === 1) {
+      if (e.key && e.key.length === 1) {
         // If gap between chars is large, assume new input
-        if (now - lastTimeRef.current > 200) {
+        if (now - lastTimeRef.current > CHAR_GAP_MS) {
           bufferRef.current = '';
         }
         bufferRef.current += e.key;
@@ -37,10 +39,25 @@ const DesktopScanner = ({ onScanComplete, focusEnabled = true }) => {
       }
     };
 
-    window.addEventListener('keydown', handleWindowKey);
+    const handlePaste = (e) => {
+      try {
+        const pasted = (e.clipboardData || window.clipboardData).getData('text') || '';
+        const code = pasted.trim();
+        if (code) {
+          console.debug('[DesktopScanner] paste detected:', code);
+          onScanComplete(code);
+        }
+      } catch (err) { /* ignore */ }
+    };
+
+    window.addEventListener('keydown', handleKey);
+    window.addEventListener('keypress', handleKey);
+    window.addEventListener('paste', handlePaste);
 
     return () => {
-      window.removeEventListener('keydown', handleWindowKey);
+      window.removeEventListener('keydown', handleKey);
+      window.removeEventListener('keypress', handleKey);
+      window.removeEventListener('paste', handlePaste);
     };
   }, [onScanComplete]);
 

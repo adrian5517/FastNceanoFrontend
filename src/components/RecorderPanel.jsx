@@ -15,7 +15,7 @@ export default function RecorderPanel({
 }) {
   return (
     <div className="rounded-2xl p-4 bg-white/4 flex flex-col items-center gap-4 w-full">
-      
+      <p className="text-cream/80 text-center">Place your card or scan at the kiosk.</p>
 
       <DesktopScanner
         onScanComplete={(code) => handleScan(code)}

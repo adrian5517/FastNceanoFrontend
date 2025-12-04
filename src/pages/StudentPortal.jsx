@@ -2,12 +2,12 @@ import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { AlertTriangle } from 'lucide-react';
 
-import StudentInfoCard from '../components/StudentInfoCard';
 import StudentIDCard from '../components/StudentIDCard';
 import RecorderPanel from '../components/RecorderPanel';
 import VisitHistory from '../components/VisitHistory';
 import ActiveSessionBanner from '../components/ActiveSessionBanner';
 import DarkModeToggle from '../components/DarkModeToggle';
+import { cleanScannerString } from '../utils/scannerSanitizer';
 
 const API = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 const DEVICE_ID = 'kiosk-1';
@@ -87,12 +87,37 @@ export default function StudentPortal() {
   const handleScan = async (code) => {
     console.debug('[SCAN]', code);
     resetState();
+    // Use shared sanitizer utility
+
+    // Some scanners may send a JS/JSON-like payload (e.g. {id: '...', studentNo: '...'})
+    // Attempt to parse JSON out of the scanned string and prefer the studentNo or id as the qr value.
+    let qrPayload = code;
+    if (typeof code === 'string') {
+      const raw = cleanScannerString(code);
+      const s = raw.trim();
+      // Quick detection: starts with { and ends with } -> try parse
+      if (s.startsWith('{') && s.endsWith('}')) {
+        try {
+          // Replace single quotes with double for naive JSON-like strings
+          const normalized = s.replace(/(['"])??([a-zA-Z0-9_]+)\1??\s*:/g, '"$2":').replace(/'/g, '"');
+          const parsed = JSON.parse(normalized);
+          // Prefer studentNo if available, otherwise id, otherwise use entire JSON string
+          qrPayload = parsed.studentNo || parsed.id || JSON.stringify(parsed);
+          console.debug('[SCAN] parsed payload ->', parsed, 'using qr:', qrPayload);
+        } catch (err) {
+          console.debug('[SCAN] could not parse scanned JSON-like payload', err);
+          qrPayload = s;
+        }
+      } else {
+        qrPayload = s;
+      }
+    }
 
     try {
       const res = await fetch(`${API}/api/attendance/scan`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ qr: code })
+        body: JSON.stringify({ qr: qrPayload })
       });
 
       const data = await res.json();
