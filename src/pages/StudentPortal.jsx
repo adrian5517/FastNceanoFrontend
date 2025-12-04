@@ -8,6 +8,7 @@ import VisitHistory from '../components/VisitHistory';
 import ActiveSessionBanner from '../components/ActiveSessionBanner';
 import DarkModeToggle from '../components/DarkModeToggle';
 import { cleanScannerString } from '../utils/scannerSanitizer';
+import LiveActivityPanel from '../components/LiveActivityPanel';
 
 const API = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 const DEVICE_ID = 'kiosk-1';
@@ -282,6 +283,11 @@ export default function StudentPortal() {
                 <p className="text-cream/70 text-center max-w-lg">
                   Place your card or scan at the kiosk. The kiosk detects most desktop scanners automatically.
                 </p>
+
+                {/* Live activity (non-clickable) placed here per request */}
+                <div className="w-full mt-4">
+                  <LiveActivityPanel activities={recent} />
+                </div>
               </div>
             </motion.div>
 
@@ -323,6 +329,7 @@ export default function StudentPortal() {
               timeInResult={timeInResult}
               timeOutResult={timeOutResult}
             />
+            {/* Live activity moved to left panel (below ID card) */}
 
             {activeSession && <ActiveSessionBanner session={activeSession} />}
             {/* If a student is selected show their history, otherwise show recent visits across all students */}
