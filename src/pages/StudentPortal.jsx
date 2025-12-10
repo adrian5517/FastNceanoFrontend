@@ -235,6 +235,25 @@ export default function StudentPortal() {
 
       fetchHistory(data.student._id);
       fetchRecent(10);
+
+      // Optimistically update recent list so LiveActivity shows the time-out immediately
+      try {
+        const visit = {
+          _id: outData.session?._id || `live-out-${Date.now()}`,
+          timeIn: outData.session?.timeIn || null,
+          timeOut: outData.session?.timeOut || outData.timeOutAt || timestamp.toISOString(),
+          purpose: outData.session?.purpose || '',
+          status: 'OUT',
+          student: data.student || null,
+          durationMs: outData.durationMs || null,
+        };
+        setRecent(prev => {
+          const next = [visit, ...prev.filter(r => String(r._id) !== String(visit._id))];
+          return next.slice(0, 10);
+        });
+      } catch (e) {
+        // ignore optimistic update errors
+      }
     } catch (err) {
       console.error('Auto time-out failed:', err);
     }
@@ -261,6 +280,25 @@ export default function StudentPortal() {
       setTimeInResult(data);
       setNeedsPurpose(false);
       setActiveSession(data.session || null);
+
+      // Optimistically prepend the new time-in to recent so LiveActivity updates immediately
+      try {
+        const session = data.session || {};
+        const visit = {
+          _id: session._id || `live-in-${Date.now()}`,
+          timeIn: session.timeIn || data.timeInAt || new Date().toISOString(),
+          timeOut: session.timeOut || null,
+          purpose: session.purpose || purpose || '',
+          status: 'IN',
+          student: student || null,
+        };
+        setRecent(prev => {
+          const next = [visit, ...prev.filter(r => String(r._id) !== String(visit._id))];
+          return next.slice(0, 10);
+        });
+      } catch (e) {
+        // ignore optimistic update errors
+      }
 
       // ARIA message
       const timestamp = new Date(
