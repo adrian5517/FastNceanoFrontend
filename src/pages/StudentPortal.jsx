@@ -69,7 +69,33 @@ export default function StudentPortal() {
       const res = await fetch(`${API}/api/attendance/recent?page=${page}&limit=${limit}`);
       const data = await res.json();
       // API returns { visits, page, limit, total, totalPages, hasMore }
-      setRecent(data.visits || []);
+      const fetched = Array.isArray(data.visits) ? data.visits : [];
+      // Merge fetched visits with any optimistic/local entries to avoid losing freshly-added items
+      setRecent(prev => {
+        const seen = new Set();
+        const merged = [];
+        // keep fetched visits first (server-authoritative)
+        for (const v of fetched) {
+          const id = String(v._id || v.id || '');
+          if (!id) continue;
+          seen.add(id);
+          merged.push(v);
+        }
+        // append previous local entries that server didn't return yet (optimistic entries)
+        for (const p of prev) {
+          const id = String(p._id || p.id || '');
+          if (!id) {
+            // keep entries without id (very temporary) but avoid infinite growth
+            merged.push(p);
+            continue;
+          }
+          if (!seen.has(id)) {
+            seen.add(id);
+            merged.push(p);
+          }
+        }
+        return merged.slice(0, limit);
+      });
       setRecentPage(data.page || page);
       setRecentTotalPages(data.totalPages || 1);
     } catch (err) {
