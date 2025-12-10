@@ -57,8 +57,21 @@ const ActivityRow = ({ activity, index }) => {
             <div className="text-white/40 text-[11px]">{formatDuration(activity.durationMs)}</div>
           )}
         </div>
-      </div>
-    </motion.div>
+        </div>
+
+        {/* Action badge: Time In / Time Out */}
+          <div className="ml-3">
+            {(() => {
+              const actionLabel = (type === 'IN' || (!type && activity.timeIn && !activity.timeOut)) ? 'Time In' : 'Time Out';
+              const isIn = actionLabel === 'Time In';
+              return (
+                <div className={`px-3 py-1 rounded-full text-xs font-medium ${isIn ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
+                  {actionLabel}
+                </div>
+              );
+            })()}
+              </div>
+            </motion.div>
   );
 };
 

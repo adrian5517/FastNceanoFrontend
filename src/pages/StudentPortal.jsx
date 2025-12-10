@@ -10,7 +10,7 @@ import DarkModeToggle from '../components/DarkModeToggle';
 import { cleanScannerString } from '../utils/scannerSanitizer';
 import LiveActivityPanel from '../components/LiveActivityPanel';
 
-const API = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+const API = process.env.REACT_APP_API_URL || 'https://fastnceanobackend.onrender.com';
 const DEVICE_ID = 'kiosk-1';
 
 export default function StudentPortal() {
@@ -80,6 +80,50 @@ export default function StudentPortal() {
   // Fetch recent visits on mount so the panel shows recent visitors even before a scan
   useEffect(() => {
     fetchRecent(1, 10);
+  }, []);
+
+  // Live updates via Server-Sent Events (SSE)
+  useEffect(() => {
+    const url = `${API}/api/activities/stream`;
+    let es;
+    try {
+      es = new EventSource(url);
+    } catch (e) {
+      console.warn('EventSource not supported or failed to connect', e);
+      return;
+    }
+
+    es.onmessage = (ev) => {
+      try {
+        const obj = JSON.parse(ev.data);
+        // Convert incoming object to Visit-like shape expected by UI
+        const visit = {
+          _id: obj.session && obj.session._id ? obj.session._id : `live-${Date.now()}`,
+          timeIn: obj.type === 'IN' ? (obj.session?.timeIn || obj.timestamp) : obj.session?.timeIn,
+          timeOut: obj.type === 'OUT' ? (obj.session?.timeOut || obj.timestamp) : obj.session?.timeOut,
+          purpose: obj.session?.purpose || obj.session?.description || (obj.type === 'IN' ? 'Visit' : 'Exit'),
+          status: obj.type === 'IN' ? 'IN' : 'OUT',
+          student: obj.student || null,
+          durationMs: obj.durationMs
+        };
+
+        setRecent(prev => {
+          const next = [visit, ...prev.filter(r => String(r._id) !== String(visit._id))];
+          return next.slice(0, 10);
+        });
+      } catch (err) {
+        // ignore malformed messages or comments
+      }
+    };
+
+    es.onerror = (err) => {
+      // If connection closed, try reconnect automatically (EventSource does this), but log for debug
+      console.warn('SSE error', err);
+    };
+
+    return () => {
+      try { es.close(); } catch (e) {}
+    };
   }, []);
 
   /* ---------------------------------------------

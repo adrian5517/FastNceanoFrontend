@@ -12,7 +12,7 @@ import {
 import { useNavigate } from "react-router-dom";
 
 // API base for frontend requests (module-level to satisfy lint and avoid TDZ issues)
-const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+const API_BASE = process.env.REACT_APP_API_URL || 'https://fastnceanobackend.onrender.com';
 
 /* -------------------- Animations -------------------- */
 const containerVariants = {
@@ -199,7 +199,7 @@ const AdminDashboard = ({ onLogout }) => {
 
     (async () => {
       try {
-        const base = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+        const base = API_BASE;
         const token = localStorage.getItem('token');
         const headers = token ? { Authorization: `Bearer ${token}` } : {};
         const resp = await fetch(`${base}/api/students/${s.id || s._id}`, { headers });
@@ -631,7 +631,7 @@ const AdminDashboard = ({ onLogout }) => {
         if (!showRegisterModal) return;
         if (regValues.studentNo && regValues.studentNo.trim()) return;
         // use a lightweight fetch here so this effect doesn't depend on apiFetch or API_BASE
-        const base = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+        const base = API_BASE;
         const token = localStorage.getItem('token');
         const headers = token ? { Authorization: `Bearer ${token}` } : {};
         const resp = await fetch(`${base}/api/students/generateNo`, { headers });
